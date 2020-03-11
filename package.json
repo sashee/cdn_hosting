@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "directories": {
-    "example": "examples"
-  },
+	"bin": {
+		"cdn_hosting": "./bin/process.js"
+	},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
