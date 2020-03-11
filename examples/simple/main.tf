@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 module "cdn_hosting" {
-	source = "../.."
+	source = "github.com/sashee/cdn_hosting"
 }
 
 data "aws_caller_identity" "current" {}
