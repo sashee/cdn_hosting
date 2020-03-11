@@ -3,11 +3,11 @@ const cheerio = require("cheerio");
 const parseDataURL = require("data-urls");
 const mime = require("mime-types");
 const crypto = require("crypto");
-const https = require("https");
 const url = require("url");
 const path = require("path");
 const parseSrcset = require("parse-srcset");
 const aws = require("aws-sdk");
+const fg = require("fast-glob");
 
 const s3 = new aws.S3();
 
@@ -47,14 +47,14 @@ const processImg = (cfUrl, bucket) => async (filename, img) => {
 	return `https://${cfUrl}/${filename}`;
 };
 
-const processSrc = (cfUrl, bucket) => (file) => async (src) => {
+const processSrc = (cfUrl, bucket, srcDir) => (file) => async (src) => {
 	if (src.startsWith("data:")) {
 		const dataURL = parseDataURL(src);
 		const extension = "." + mime.extension(dataURL.mimeType.toString());
 		const filename = `${hash(dataURL.body)}${extension}`;
 		return await processImg(cfUrl, bucket)(filename, dataURL.body);
 	}else if (url.parse(src).host === null) {
-		const imgFile = await fs.readFile(`${path.dirname(file)}${path.sep}${src}`);
+		const imgFile = await fs.readFile(path.join(srcDir, path.dirname(file), src));
 		const extension = path.extname(src);
 		const filename = `${hash(imgFile)}${extension}`;
 		return await processImg(cfUrl, bucket)(filename, imgFile);
@@ -63,17 +63,15 @@ const processSrc = (cfUrl, bucket) => (file) => async (src) => {
 	}
 };
 
-exports.process = async (cwd, files, dest) => {
-	console.log(cwd);
-	console.log(files);
-	console.log(dest);
-	const {outputs: {bucket: {value: bucket}, url: {value: cfUrl}}} = JSON.parse(await fs.readFile(`${cwd}/terraform.tfstate`, "utf8"));
-	console.log(bucket);
-	console.log(cfUrl);
+exports.process = async (srcDir, dest) => {
+	const files = await fg("**/*.html", {cwd: srcDir});
+	const {outputs: {bucket: {value: bucket}, url: {value: cfUrl}}} = JSON.parse(await fs.readFile("terraform.tfstate", "utf8"));
+
+	await fs.rmdir(dest, {recursive: true});
 
 	await Promise.all(files.map(async (file) => {
-		const processSrcForFile = processSrc(cfUrl, bucket)(file);
-		const $ = cheerio.load(await fs.readFile(file, "utf8"));
+		const processSrcForFile = processSrc(cfUrl, bucket, srcDir)(file);
+		const $ = cheerio.load(await fs.readFile(path.join(srcDir, file), "utf8"));
 		await Promise.all($("img").toArray().map(async (e) => {
 			const img = $(e);
 			if (img.attr("src") !== undefined) {
@@ -102,6 +100,8 @@ exports.process = async (cwd, files, dest) => {
 			}
 
 		}));
-		console.log($.html());
+		const result = $.html();
+		await fs.mkdir(path.join(dest, path.dirname(file)), {recursive: true});
+		await fs.writeFile(path.join(dest, file), result);
 	}));
 };

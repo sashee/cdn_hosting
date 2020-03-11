@@ -6,13 +6,20 @@ const yargs = require("yargs")
 		description: "Target directory",
 		demandOption: true,
 	})
+	.option("src", {
+		type: "string",
+		description: "Source directory",
+		demandOption: true,
+	})
 	.argv;
 
 const lib = require("../index");
 
-const cwd = process.cwd();
-
 (async () => {
-	await lib.process(cwd, yargs._, yargs.dest);
+	try {
+		await lib.process(yargs.src, yargs.dest);
+	}catch(e) {
+		console.error(e);
+	}
 })();
 
