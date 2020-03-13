@@ -49,9 +49,6 @@ resource "aws_cloudfront_distribution" "distribution" {
 
     viewer_protocol_policy = "https-only"
 		compress = true
-    min_ttl                = 31536000
-    default_ttl            = 31536000
-    max_ttl                = 31536000
   }
 
   restrictions {

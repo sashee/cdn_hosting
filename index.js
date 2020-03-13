@@ -33,6 +33,7 @@ const uploadToS3 = (bucket) => (filename, file) => {
 			Key: filename,
 			Body: file,
 			ContentType: mime.lookup(filename),
+			CacheControl: "max-age=31536000",
 		}
 	}).promise();
 };
